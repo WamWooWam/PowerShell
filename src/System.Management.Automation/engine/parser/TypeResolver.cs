@@ -79,7 +79,8 @@ namespace System.Management.Automation.Language
             foreach (Assembly assembly in assemblies)
             {
                 // Skip the assemblies that we already searched and found no matching type.
-                if (searchedAssemblies.Contains(assembly)) { continue; }
+                if (searchedAssemblies.Contains(assembly))
+                { continue; }
 
                 try
                 {
@@ -806,13 +807,14 @@ namespace System.Management.Automation
                     { typeof(CimSession),                                  new[] { "CimSession" } },
                     { typeof(MailAddress),                                 new[] { "mailaddress" } },
                     { typeof(SemanticVersion),                             new[] { "semver" } },
-#if !UNIX
+                    { typeof(LanguagePrimitives.InternalPSCustomObject),   null },
+    #if !UNIX
                     { typeof(DirectoryEntry),                              new[] { "adsi" } },
                     { typeof(DirectorySearcher),                           new[] { "adsisearcher" } },
                     { typeof(ManagementClass),                             new[] { "wmiclass" } },
                     { typeof(ManagementObject),                            new[] { "wmi" } },
                     { typeof(ManagementObjectSearcher),                    new[] { "wmisearcher" } }
-#endif
+    #endif
                 }
             );
 

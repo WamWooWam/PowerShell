@@ -716,6 +716,17 @@ namespace Microsoft.PowerShell.Commands
                 ErrorRecord errorRecord = new ErrorRecord(e, "ParameterNotValidInRemoteRunspace", ErrorCategory.InvalidArgument, null);
                 cmdlet.ThrowTerminatingError(errorRecord);
             }
+
+            if(cmdlet.Context.LanguageMode == PSLanguageMode.ConstrainedLanguage)
+            {
+                string message = StringUtil.Format(CommandBaseStrings.ParameterNotValidInRemoteRunspace,
+                    cmdlet.MyInvocation.InvocationName,
+                    parameterName);
+                Exception e = new InvalidOperationException(message);
+                ErrorRecord errorRecord = new ErrorRecord(e, "ParameterNotValidInConstrainedLanguage", ErrorCategory.InvalidArgument, null);
+                cmdlet.ThrowTerminatingError(errorRecord);
+            }
+
         }
 
         #endregion

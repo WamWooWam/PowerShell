@@ -230,6 +230,17 @@ namespace System.Management.Automation
                 _currentScope != null,
                 "The currentScope should always be set.");
 
+            var i = 0;
+            var scope = _currentScope;
+            do
+            {
+                scope = scope.Parent;
+                i++;
+            } while (scope != null);
+
+            if (i > 100)
+                throw new InvalidOperationException("Too many scopes!");
+
             // Create the new child scope.
 
             SessionStateScope newScope = new SessionStateScope(_currentScope);

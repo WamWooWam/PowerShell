@@ -106,9 +106,7 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
             _pp = new PipelineProcessor();
 
             CmdletInfo cmdletInfo = new CmdletInfo(_commandName, _commandType, null, null, _context);
-
             CommandProcessor cp = new CommandProcessor(cmdletInfo, _context);
-
             foreach (CommandParameterInternal par in _commandParameterList)
             {
                 cp.AddParameter(par);

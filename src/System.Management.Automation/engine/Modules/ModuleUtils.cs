@@ -291,6 +291,8 @@ namespace System.Management.Automation.Internal
                         if (File.Exists(moduleFile))
                         {
                             isModuleDirectory = true;
+
+                            PSModuleInfo.AddToAppDomainLevelModuleCache(moduleFile, moduleFile, true);
                             yield return moduleFile;
 
                             // when finding the default modules we stop when the first

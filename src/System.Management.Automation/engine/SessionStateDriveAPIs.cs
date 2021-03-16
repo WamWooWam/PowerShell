@@ -636,7 +636,7 @@ namespace System.Management.Automation
 
         private PSDriveInfo AutomountFileSystemDrive(System.IO.DriveInfo systemDriveInfo)
         {
-            PSDriveInfo result = null;
+            // PSDriveInfo result = null;
 
             if (!IsProviderLoaded(this.ExecutionContext.ProviderNames.FileSystem))
             {
@@ -646,95 +646,97 @@ namespace System.Management.Automation
 
             // Since the drive does exist, add it.
 
-            try
-            {
-                // Get the FS provider
+            //try
+            //{
+            //    // Get the FS provider
 
-                DriveCmdletProvider driveProvider =
-                    GetDriveProviderInstance(this.ExecutionContext.ProviderNames.FileSystem);
+            //    DriveCmdletProvider driveProvider =
+            //        GetDriveProviderInstance(this.ExecutionContext.ProviderNames.FileSystem);
 
-                if (driveProvider != null)
-                {
-                    // Create a new drive
-                    string systemDriveName = systemDriveInfo.Name.Substring(0, 1);
-                    string volumeLabel = string.Empty;
-                    string displayRoot = null;
+            //    if (driveProvider != null)
+            //    {
+            //        // Create a new drive
+            //        string systemDriveName = systemDriveInfo.Name.Substring(0, 1);
+            //        string volumeLabel = string.Empty;
+            //        string displayRoot = null;
 
-                    try
-                    {
-                        // When run in an AppContainer, we may not have access to the volume label.
-                        volumeLabel = systemDriveInfo.VolumeLabel;
-                    }
-                    catch (UnauthorizedAccessException) { }
+            //        try
+            //        {
+            //            // When run in an AppContainer, we may not have access to the volume label.
+            //            volumeLabel = systemDriveInfo.VolumeLabel;
+            //        }
+            //        catch (UnauthorizedAccessException) { }
 
-                    // Get the actual root path for Network type drives
-                    if (systemDriveInfo.DriveType == DriveType.Network)
-                    {
-                        try
-                        {
-                            displayRoot = Microsoft.PowerShell.Commands.FileSystemProvider
-                                            .GetRootPathForNetworkDriveOrDosDevice(systemDriveInfo);
-                        }
-                        // We want to get root path of the network drive as extra information to display to the user.
-                        // It's okay we failed to get the root path for some reason. We don't want to throw exception
-                        // here as it would break the current behavior.
-                        catch (Win32Exception) { }
-                        catch (InvalidOperationException) { }
-                    }
+            //        // Get the actual root path for Network type drives
+            //        if (systemDriveInfo.DriveType == DriveType.Network)
+            //        {
+            //            try
+            //            {
+            //                displayRoot = Microsoft.PowerShell.Commands.FileSystemProvider
+            //                                .GetRootPathForNetworkDriveOrDosDevice(systemDriveInfo);
+            //            }
+            //            // We want to get root path of the network drive as extra information to display to the user.
+            //            // It's okay we failed to get the root path for some reason. We don't want to throw exception
+            //            // here as it would break the current behavior.
+            //            catch (Win32Exception) { }
+            //            catch (InvalidOperationException) { }
+            //        }
 
-                    PSDriveInfo newPSDriveInfo =
-                        new PSDriveInfo(
-                            systemDriveName,
-                            driveProvider.ProviderInfo,
-                            systemDriveInfo.RootDirectory.FullName,
-                            volumeLabel,
-                            null,
-                            displayRoot);
+            //        PSDriveInfo newPSDriveInfo =
+            //            new PSDriveInfo(
+            //                systemDriveName,
+            //                driveProvider.ProviderInfo,
+            //                systemDriveInfo.RootDirectory.FullName,
+            //                volumeLabel,
+            //                null,
+            //                displayRoot);
 
-                    newPSDriveInfo.IsAutoMounted = true;
+            //        newPSDriveInfo.IsAutoMounted = true;
 
-                    CmdletProviderContext context = new CmdletProviderContext(this.ExecutionContext);
+            //        CmdletProviderContext context = new CmdletProviderContext(this.ExecutionContext);
 
-                    newPSDriveInfo.DriveBeingCreated = true;
+            //        newPSDriveInfo.DriveBeingCreated = true;
 
-                    // Validate the drive with the provider
-                    result = ValidateDriveWithProvider(driveProvider, newPSDriveInfo, context, false);
+            //        // Validate the drive with the provider
+            //        result = ValidateDriveWithProvider(driveProvider, newPSDriveInfo, context, false);
 
-                    newPSDriveInfo.DriveBeingCreated = false;
+            //        newPSDriveInfo.DriveBeingCreated = false;
 
-                    if (result != null && !context.HasErrors())
-                    {
-                        // Create the drive in the global scope.
-                        GlobalScope.NewDrive(result);
-                    }
-                }
-            }
-            catch (LoopFlowException)
-            {
-                throw;
-            }
-            catch (PipelineStoppedException)
-            {
-                throw;
-            }
-            catch (ActionPreferenceStopException)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                // Since the user isn't expecting this behavior, we don't
-                // want to let errors find their way out. If there are any
-                // failures we just don't mount the drive.
+            //        if (result != null && !context.HasErrors())
+            //        {
+            //            // Create the drive in the global scope.
+            //            GlobalScope.NewDrive(result);
+            //        }
+            //    }
+            //}
+            //catch (LoopFlowException)
+            //{
+            //    throw;
+            //}
+            //catch (PipelineStoppedException)
+            //{
+            //    throw;
+            //}
+            //catch (ActionPreferenceStopException)
+            //{
+            //    throw;
+            //}
+            //catch (Exception e)
+            //{
+            //    // Since the user isn't expecting this behavior, we don't
+            //    // want to let errors find their way out. If there are any
+            //    // failures we just don't mount the drive.
 
-                MshLog.LogProviderHealthEvent(
-                    this.ExecutionContext,
-                    this.ExecutionContext.ProviderNames.FileSystem,
-                    e,
-                    Severity.Warning);
-            }
+            //    MshLog.LogProviderHealthEvent(
+            //        this.ExecutionContext,
+            //        this.ExecutionContext.ProviderNames.FileSystem,
+            //        e,
+            //        Severity.Warning);
+            //}
 
-            return result;
+            //return result;
+
+            return null;
         }
 
         /// <summary>

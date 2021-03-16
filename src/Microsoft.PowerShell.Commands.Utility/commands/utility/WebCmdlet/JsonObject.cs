@@ -612,7 +612,8 @@ namespace Microsoft.PowerShell.Commands
                 }
             }
 
-            rv = AddPsProperties(pso, rv, currentDepth, isPurePSObj, isCustomObj, in context);
+            if (!isCustomObj)
+                rv = AddPsProperties(pso, rv, currentDepth, isPurePSObj, isCustomObj, in context);
 
             return rv;
         }
@@ -697,7 +698,7 @@ namespace Microsoft.PowerShell.Commands
                 {
                 }
 
-                if (!receiver.Contains(prop.Name))
+                if (!receiver.Contains(prop.Name) && isCustomObject)
                 {
                     receiver[prop.Name] = ProcessValue(value, depth + 1, in context);
                 }
@@ -784,7 +785,12 @@ namespace Microsoft.PowerShell.Commands
                         value = null;
                     }
 
-                    result.Add(info.Name, ProcessValue(value, depth + 1, in context));
+                    string name = info.Name;
+                    JsonPropertyAttribute attribute;
+                    if ((attribute = info.GetCustomAttribute<JsonPropertyAttribute>()) != null)
+                        name = attribute.PropertyName ?? name;
+
+                    result.Add(name, ProcessValue(value, depth + 1, in context));
                 }
             }
 
@@ -805,7 +811,13 @@ namespace Microsoft.PowerShell.Commands
                             value = null;
                         }
 
-                        result.Add(info2.Name, ProcessValue(value, depth + 1, in context));
+                        string name = info2.Name;
+                        JsonPropertyAttribute attribute;
+                        if ((attribute = info2.GetCustomAttribute<JsonPropertyAttribute>()) != null)
+                            name = attribute.PropertyName ?? name;
+
+
+                        result.Add(name, ProcessValue(value, depth + 1, in context));
                     }
                 }
             }

@@ -1458,6 +1458,11 @@ namespace System.Management.Automation.Runspaces
         #endregion
 
         /// <summary>
+        /// Path to the global drive
+        /// </summary>
+        public string GlobalDrivePath { get; internal set; }
+
+        /// <summary>
         /// Ctor for Custom-Shell - Do we need this?
         /// </summary>
         protected InitialSessionState()
@@ -1611,6 +1616,7 @@ namespace System.Management.Automation.Runspaces
         {
             InitialSessionState ss = new InitialSessionState();
 
+            ss.GlobalDrivePath = this.GlobalDrivePath;
             ss.Variables.Add(this.Variables.Clone());
             ss.EnvironmentVariables.Add(this.EnvironmentVariables.Clone());
             ss.Commands.Add(this.Commands.Clone());
@@ -1622,6 +1628,11 @@ namespace System.Management.Automation.Runspaces
             foreach (string startupScript in this.StartupScripts)
             {
                 ss.StartupScripts.Add(startupScript);
+            }
+
+            foreach (string startupScript in this.StartupBlocks)
+            {
+                ss.StartupBlocks.Add(startupScript);
             }
 
             foreach (string unresolvedCommandsToExpose in this.UnresolvedCommandsToExpose)
@@ -2118,6 +2129,23 @@ namespace System.Management.Automation.Runspaces
 
         private HashSet<string> _startupScripts = new HashSet<string>();
 
+        /// <summary>
+        /// </summary>
+        public virtual HashSet<string> StartupBlocks
+        {
+            get
+            {
+                if (_startupBlocks == null)
+                {
+                    Interlocked.CompareExchange(ref _startupBlocks, new HashSet<string>(), null);
+                }
+
+                return _startupBlocks;
+            }
+        }
+
+        private HashSet<string> _startupBlocks = new HashSet<string>();
+
         private object _syncObject = new object();
 
         internal void Bind(ExecutionContext context, bool updateOnly, PSModuleInfo module, bool noClobber, bool local, bool setLocation)
@@ -2416,7 +2444,8 @@ namespace System.Management.Automation.Runspaces
             // Load the assemblies and initialize the assembly cache...
             foreach (SessionStateAssemblyEntry ssae in Assemblies)
             {
-                if (etwEnabled) RunspaceEventSource.Log.LoadAssemblyStart(ssae.Name, ssae.FileName);
+                if (etwEnabled)
+                    RunspaceEventSource.Log.LoadAssemblyStart(ssae.Name, ssae.FileName);
                 Exception error = null;
                 Assembly asm = context.AddAssembly(ssae.Name, ssae.FileName, out error);
 
@@ -2554,6 +2583,21 @@ namespace System.Management.Automation.Runspaces
                 }
             }
 
+            if (!string.IsNullOrWhiteSpace(GlobalDrivePath))
+            {
+                Exception userDriveException = ProcessGlobalDrive(initializedRunspace);
+                if (userDriveException != null)
+                {
+                    runspaceInitTracer.WriteLine(
+                        "Runspace open failed while processing global drive with error {1}",
+                        userDriveException);
+
+                    Exception result = PSTraceSource.NewInvalidOperationException(userDriveException, RemotingErrorIdStrings.UserDriveProcessingThrewTerminatingError, userDriveException.Message);
+                    return result;
+                }
+            }
+
+
             // Process startup scripts
             if (StartupScripts.Count > 0)
             {
@@ -2567,6 +2611,11 @@ namespace System.Management.Automation.Runspaces
                     Exception result = PSTraceSource.NewInvalidOperationException(startupScriptException, RemotingErrorIdStrings.StartupScriptThrewTerminatingError, startupScriptException.Message);
                     return result;
                 }
+            }
+
+            if (StartupBlocks.Count > 0)
+            {
+                ProcessStartupBlocks(initializedRunspace);
             }
 
             // Start transcribing
@@ -2831,6 +2880,44 @@ namespace System.Management.Automation.Runspaces
             return ex;
         }
 
+        private Exception ProcessGlobalDrive(Runspace initializedRunspace)
+        {
+            Exception ex = null;
+            try
+            {
+                List<ProviderInfo> fileSystemProviders = initializedRunspace.ExecutionContext.EngineSessionState.Providers["FileSystem"];
+                if (fileSystemProviders.Count == 0)
+                {
+                    throw new PSInvalidOperationException(RemotingErrorIdStrings.UserDriveCannotGetFileSystemProvider);
+                }
+
+                // Create directory if it doesn't exist.
+                if (!Directory.Exists(GlobalDrivePath))
+                {
+                    Directory.CreateDirectory(GlobalDrivePath);
+                }
+
+                // Create the PSDrive.
+                var newDriveInfo = new PSDriveInfo(
+                    "Global",
+                    fileSystemProviders[0],
+                    GlobalDrivePath.TrimEnd('\\', '/'),
+                    null,
+                    null);
+                var userDriveInfo = initializedRunspace.ExecutionContext.SessionState.Drive.New(newDriveInfo, null);
+            }
+            catch (ArgumentNullException e) { ex = e; }
+            catch (ArgumentException e) { ex = e; }
+            catch (NotSupportedException e) { ex = e; }
+            catch (ProviderNotFoundException e) { ex = e; }
+            catch (ProviderInvocationException e) { ex = e; }
+            catch (KeyNotFoundException e) { ex = e; }
+            catch (IOException e) { ex = e; }
+            catch (UnauthorizedAccessException e) { ex = e; }
+
+            return ex;
+        }
+
         private string MakeUserNamePath()
         {
             // Use the user name passed to initial session state if available, or
@@ -2873,6 +2960,18 @@ namespace System.Management.Automation.Runspaces
             }
 
             return null;
+        }
+
+        private void ProcessStartupBlocks(Runspace initializedRunspace)
+        {
+            foreach (string startupScript in StartupBlocks)
+            {
+                using (PowerShell psToInvoke = PowerShell.Create())
+                {
+                    psToInvoke.AddCommand(new Command(startupScript, true, true));
+                    ProcessPowerShellCommand(psToInvoke, initializedRunspace);
+                }
+            }
         }
 
         private Exception ProcessPowerShellCommand(PowerShell psToInvoke, Runspace initializedRunspace)
@@ -4552,25 +4651,25 @@ end {
                 SpecialVariables.IsLinux,
                 Platform.IsLinux,
                 string.Empty,
-                ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                ScopedItemOptions.ReadOnly),
 
             new SessionStateVariableEntry(
                 SpecialVariables.IsMacOS,
                 Platform.IsMacOS,
                 string.Empty,
-                ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                ScopedItemOptions.ReadOnly),
 
             new SessionStateVariableEntry(
                 SpecialVariables.IsWindows,
                 Platform.IsWindows,
                 string.Empty,
-                ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                ScopedItemOptions.ReadOnly),
 
             new SessionStateVariableEntry(
                 SpecialVariables.IsCoreCLR,
                 Platform.IsCoreCLR,
                 string.Empty,
-                ScopedItemOptions.ReadOnly | ScopedItemOptions.AllScope),
+                ScopedItemOptions.ReadOnly),
             #endregion
         };
 
@@ -5258,7 +5357,8 @@ end {
                             // the users of the cmdlet, instead of the author, should have control of what options applied to an alias
                             // ('ScopedItemOptions.ReadOnly' and/or 'ScopedItemOptions.AllScopes').
                             var aliasEntry = new SessionStateAliasEntry(alias, cmdletName, description: string.Empty, ScopedItemOptions.None);
-                            if (psSnapInInfo != null) { aliasEntry.SetPSSnapIn(psSnapInInfo); }
+                            if (psSnapInInfo != null)
+                            { aliasEntry.SetPSSnapIn(psSnapInInfo); }
 
                             if (moduleInfo != null)
                             {

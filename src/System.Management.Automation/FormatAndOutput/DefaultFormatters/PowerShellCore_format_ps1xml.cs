@@ -792,7 +792,7 @@ namespace System.Management.Automation.Runspaces
                                 )
                             }
 
-                            function Get-VT100Color([ConsoleColor] $color) {
+                            function Get-VT100Color([Nullable[ConsoleColor]] $color) {
                                 if (!$Host.UI.SupportsVirtualTerminal -or !([string]::IsNullOrEmpty($env:__SuppressAnsiEscapeSequences))) {
                                     return ''
                                 }
@@ -1074,10 +1074,10 @@ namespace System.Management.Automation.Runspaces
                                         $errorColor = ''
                                         $accentColor = ''
 
-                                        if ($null -ne $Host.PrivateData) {
-                                            $errorColor = Get-VT100Color $Host.PrivateData.ErrorForegroundColor
-                                            $accentColor = Get-VT100Color ($Host.PrivateData.ErrorAccentColor ?? $errorColor)
-                                        }
+                                        # if ($null -ne $Host.PrivateData) {
+                                        #     $errorColor = Get-VT100Color $Host.PrivateData.ErrorForegroundColor
+                                        #     $accentColor = Get-VT100Color ($Host.PrivateData.ErrorAccentColor ?? $errorColor)
+                                        # }
 
                                         $posmsg = ''
                                         $headerWhitespace = ''

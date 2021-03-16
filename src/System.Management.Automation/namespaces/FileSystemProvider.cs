@@ -1009,159 +1009,161 @@ namespace Microsoft.PowerShell.Commands
         /// </returns>
         protected override Collection<PSDriveInfo> InitializeDefaultDrives()
         {
-            Collection<PSDriveInfo> results = new Collection<PSDriveInfo>();
+            return new Collection<PSDriveInfo>();
 
-            DriveInfo[] logicalDrives = DriveInfo.GetDrives();
-            if (logicalDrives != null)
-            {
-                foreach (DriveInfo newDrive in logicalDrives)
-                {
-                    // Making sure to obey the StopProcessing.
-                    if (Stopping)
-                    {
-                        results.Clear();
-                        break;
-                    }
+//            Collection<PSDriveInfo> results = new Collection<PSDriveInfo>();
 
-                    // cover everything by the try-catch block, because some of the
-                    // DriveInfo properties may throw exceptions
-                    try
-                    {
-                        string newDriveName = newDrive.Name.Substring(0, 1);
+//            DriveInfo[] logicalDrives = DriveInfo.GetDrives();
+//            if (logicalDrives != null)
+//            {
+//                foreach (DriveInfo newDrive in logicalDrives)
+//                {
+//                    // Making sure to obey the StopProcessing.
+//                    if (Stopping)
+//                    {
+//                        results.Clear();
+//                        break;
+//                    }
 
-                        string description = string.Empty;
-                        string root = newDrive.Name;
-                        string displayRoot = null;
+//                    // cover everything by the try-catch block, because some of the
+//                    // DriveInfo properties may throw exceptions
+//                    try
+//                    {
+//                        string newDriveName = newDrive.Name.Substring(0, 1);
 
-                        if (newDrive.DriveType == DriveType.Fixed)
-                        {
-                            try
-                            {
-                                description = newDrive.VolumeLabel;
-                            }
-                            // trying to read the volume label may cause an
-                            // IOException or SecurityException. Just default
-                            // to an empty description.
-                            catch (IOException)
-                            {
-                            }
-                            catch (System.Security.SecurityException)
-                            {
-                            }
-                            catch (System.UnauthorizedAccessException)
-                            {
-                            }
-                        }
+//                        string description = string.Empty;
+//                        string root = newDrive.Name;
+//                        string displayRoot = null;
 
-                        if (newDrive.DriveType == DriveType.Network)
-                        {
-                            // Platform notes: This is important because certain mount
-                            // points on non-Windows are enumerated as drives by .NET, but
-                            // the platform itself then has no real network drive support
-                            // as required by this context. Solution: check for network
-                            // drive support before using it.
-#if UNIX
-                            continue;
-#else
-                            displayRoot = GetRootPathForNetworkDriveOrDosDevice(newDrive);
-#endif
-                        }
+//                        if (newDrive.DriveType == DriveType.Fixed)
+//                        {
+//                            try
+//                            {
+//                                description = newDrive.VolumeLabel;
+//                            }
+//                            // trying to read the volume label may cause an
+//                            // IOException or SecurityException. Just default
+//                            // to an empty description.
+//                            catch (IOException)
+//                            {
+//                            }
+//                            catch (System.Security.SecurityException)
+//                            {
+//                            }
+//                            catch (System.UnauthorizedAccessException)
+//                            {
+//                            }
+//                        }
 
-                        if (newDrive.DriveType == DriveType.Fixed)
-                        {
-                            if (!newDrive.RootDirectory.Exists)
-                            {
-                                continue;
-                            }
+//                        if (newDrive.DriveType == DriveType.Network)
+//                        {
+//                            // Platform notes: This is important because certain mount
+//                            // points on non-Windows are enumerated as drives by .NET, but
+//                            // the platform itself then has no real network drive support
+//                            // as required by this context. Solution: check for network
+//                            // drive support before using it.
+//#if UNIX
+//                            continue;
+//#else
+//                            displayRoot = GetRootPathForNetworkDriveOrDosDevice(newDrive);
+//#endif
+//                        }
 
-                            root = newDrive.RootDirectory.FullName;
-                        }
+//                        if (newDrive.DriveType == DriveType.Fixed)
+//                        {
+//                            if (!newDrive.RootDirectory.Exists)
+//                            {
+//                                continue;
+//                            }
 
-#if UNIX
-                        // Porting notes: On platforms with single root filesystems, ensure
-                        // that we add a filesystem with the root "/" to the initial drive list,
-                        // otherwise path handling will not work correctly because there
-                        // is no : available to separate the filesystems from each other
-                        if (root != StringLiterals.DefaultPathSeparatorString
-                            && newDriveName == StringLiterals.DefaultPathSeparatorString)
-                        {
-                            root = StringLiterals.DefaultPathSeparatorString;
-                        }
-#endif
+//                            root = newDrive.RootDirectory.FullName;
+//                        }
 
-                        // Porting notes: On non-windows platforms .net can report two
-                        // drives with the same root, make sure to only add one of those
-                        bool skipDuplicate = false;
-                        foreach (PSDriveInfo driveInfo in results)
-                        {
-                            if (driveInfo.Root == root)
-                            {
-                                skipDuplicate = true;
-                                break;
-                            }
-                        }
+//#if UNIX
+//                        // Porting notes: On platforms with single root filesystems, ensure
+//                        // that we add a filesystem with the root "/" to the initial drive list,
+//                        // otherwise path handling will not work correctly because there
+//                        // is no : available to separate the filesystems from each other
+//                        if (root != StringLiterals.DefaultPathSeparatorString
+//                            && newDriveName == StringLiterals.DefaultPathSeparatorString)
+//                        {
+//                            root = StringLiterals.DefaultPathSeparatorString;
+//                        }
+//#endif
 
-                        if (skipDuplicate)
-                        {
-                            continue;
-                        }
+//                        // Porting notes: On non-windows platforms .net can report two
+//                        // drives with the same root, make sure to only add one of those
+//                        bool skipDuplicate = false;
+//                        foreach (PSDriveInfo driveInfo in results)
+//                        {
+//                            if (driveInfo.Root == root)
+//                            {
+//                                skipDuplicate = true;
+//                                break;
+//                            }
+//                        }
 
-                        // Create a new VirtualDrive for each logical drive
-                        PSDriveInfo newPSDriveInfo =
-                            new PSDriveInfo(
-                                newDriveName,
-                                ProviderInfo,
-                                root,
-                                description,
-                                null,
-                                displayRoot);
+//                        if (skipDuplicate)
+//                        {
+//                            continue;
+//                        }
 
-                        // The network drive is detected when PowerShell is launched.
-                        // Hence it has been persisted during one of the earlier sessions,
-                        if (newDrive.DriveType == DriveType.Network)
-                        {
-                            newPSDriveInfo.IsNetworkDrive = true;
-                        }
+//                        // Create a new VirtualDrive for each logical drive
+//                        PSDriveInfo newPSDriveInfo =
+//                            new PSDriveInfo(
+//                                newDriveName,
+//                                ProviderInfo,
+//                                root,
+//                                description,
+//                                null,
+//                                displayRoot);
 
-                        if (newDrive.DriveType != DriveType.Fixed)
-                        {
-                            newPSDriveInfo.IsAutoMounted = true;
-                        }
+//                        // The network drive is detected when PowerShell is launched.
+//                        // Hence it has been persisted during one of the earlier sessions,
+//                        if (newDrive.DriveType == DriveType.Network)
+//                        {
+//                            newPSDriveInfo.IsNetworkDrive = true;
+//                        }
 
-                        // Porting notes: on the non-Windows platforms, the drive never
-                        // uses : as a separator between drive and path
-                        if (!Platform.IsWindows)
-                        {
-                            newPSDriveInfo.VolumeSeparatedByColon = false;
-                        }
+//                        if (newDrive.DriveType != DriveType.Fixed)
+//                        {
+//                            newPSDriveInfo.IsAutoMounted = true;
+//                        }
 
-                        results.Add(newPSDriveInfo);
-                    }
-                    // If there are issues accessing properties of the DriveInfo, do
-                    // not add the drive
-                    catch (IOException)
-                    {
-                    }
-                    catch (System.Security.SecurityException)
-                    {
-                    }
-                    catch (System.UnauthorizedAccessException)
-                    {
-                    }
-                }
-            }
+//                        // Porting notes: on the non-Windows platforms, the drive never
+//                        // uses : as a separator between drive and path
+//                        if (!Platform.IsWindows)
+//                        {
+//                            newPSDriveInfo.VolumeSeparatedByColon = false;
+//                        }
 
-            results.Add(
-                new PSDriveInfo(
-                    DriveNames.TempDrive,
-                    ProviderInfo,
-                    Path.GetTempPath(),
-                    SessionStateStrings.TempDriveDescription,
-                    credential: null,
-                    displayRoot: null)
-            );
+//                        results.Add(newPSDriveInfo);
+//                    }
+//                    // If there are issues accessing properties of the DriveInfo, do
+//                    // not add the drive
+//                    catch (IOException)
+//                    {
+//                    }
+//                    catch (System.Security.SecurityException)
+//                    {
+//                    }
+//                    catch (System.UnauthorizedAccessException)
+//                    {
+//                    }
+//                }
+//            }
 
-            return results;
+//            results.Add(
+//                new PSDriveInfo(
+//                    DriveNames.TempDrive,
+//                    ProviderInfo,
+//                    Path.GetTempPath(),
+//                    SessionStateStrings.TempDriveDescription,
+//                    credential: null,
+//                    displayRoot: null)
+//            );
+
+//            return results;
         }
 
         #endregion DriveCmdletProvider methods
